@@ -9,7 +9,7 @@
 
         <div class="rounded-2xl border border-brand-100 bg-brand-50 px-4 py-3 text-[14.5px] text-gray-700">
             Untuk sementara, pengguna ditambahkan lewat terminal:
-            <code class="block sm:inline mt-1 sm:mt-0 text-[13px] text-brand-800 break-all">php artisan siakred:user username email "Nama Lengkap" --role=dosen</code>
+            <code class="block sm:inline mt-1 sm:mt-0 text-[13px] text-brand-800 break-all">php artisan siakred:user username email "Nama Lengkap" --role=tim_akreditasi</code>
         </div>
 
         {{-- Pengguna --}}

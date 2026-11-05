@@ -17,19 +17,43 @@
     </div>
 
     @php
-        // Saring menu sesuai hak baca pengguna (config/permissions.php)
+        // Sidebar per peran (dev.md §6.1–6.4). Item untuk peran lain TIDAK dirender.
         $user = auth()->user();
-        $boleh = fn ($m) => empty($m['entitas']) || ($user && $user->bolehAkses($m['entitas'], 'r'));
+        $peranUser = $user?->roleCodes() ?? [];
+        $peranUtama = $user?->peranUtama();
+        $boleh = fn ($m) => (bool) array_intersect($m['roles'] ?? [], $peranUser);
+        $label = fn ($l) => is_array($l) ? ($l[$peranUtama] ?? reset($l)) : $l;
+
         $menu = collect(config('siakred.menu'))
-            ->map(function ($m) use ($boleh) {
-                if (isset($m['children'])) {
-                    $m['children'] = array_values(array_filter($m['children'], $boleh));
-                    return $m['children'] ? $m : null;
+            ->map(function ($m) use ($boleh, $label, $peranUtama) {
+                if (!empty($m['divider'])) {
+                    return $m;
                 }
-                return (!empty($m['divider']) || $boleh($m)) ? $m : null;
+                if (isset($m['children'])) {
+                    $anak = array_values(array_filter($m['children'], $boleh));
+                    if (count($anak) === 1) {
+                        // Grup dengan satu anak -> tautan biasa berlabel nama grup
+                        return ['label' => $m['label'], 'icon' => $m['icon'], 'route' => $anak[0]['route']];
+                    }
+                    return $anak ? ['children' => $anak] + $m : null;
+                }
+                if (!$boleh($m)) {
+                    return null;
+                }
+                $m['label'] = $label($m['label']);
+                $m['badge'] = $m['badge'] ?? ($m['badge_roles'][$peranUtama] ?? null);
+                return $m;
             })
             ->filter()
             ->values();
+
+        // Angka antrean (hanya dihitung bila ada menu yang memakainya)
+        $badgeDipakai = $menu->pluck('badge')->filter()->unique();
+        $hitungBadge = [
+            'verifikasi'  => fn () => \App\Models\CapaianIndikator::where('status', 'diajukan')->count(),
+            'persetujuan' => fn () => \App\Models\CapaianIndikator::where('status', 'terverifikasi')->count(),
+        ];
+        $badge = $badgeDipakai->mapWithKeys(fn ($b) => [$b => $hitungBadge[$b]()]);
     @endphp
 
     <nav class="flex-1 overflow-y-auto overscroll-contain px-3 py-3 space-y-0.5 text-[15px]">
@@ -62,6 +86,10 @@
                    @if ($active) aria-current="page" @endif>
                     @include('layouts.partials.icon', ['name' => $item['icon']])
                     <span class="flex-1 min-w-0 truncate">{{ $item['label'] }}</span>
+                    @if (!empty($item['badge']) && ($badge[$item['badge']] ?? 0) > 0)
+                        <span class="shrink-0 min-w-[22px] h-[22px] px-1.5 rounded-full bg-white text-brand-700 text-xs font-bold grid place-items-center"
+                              aria-label="{{ $badge[$item['badge']] }} menunggu">{{ $badge[$item['badge']] }}</span>
+                    @endif
                 </a>
                 {{-- Panel tambahan (mis. riwayat chat) muncul tepat di bawah menu yang aktif --}}
                 @if ($active && !empty($item['special']))

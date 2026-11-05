@@ -35,27 +35,30 @@ Route::middleware('auth')->group(function () {
 
     // Pengaturan
     Route::get('/pengaturan/pengguna', [PenggunaController::class, 'index'])
-        ->middleware('akses:users,r')->name('pengaturan.pengguna');
+        ->middleware('peran:administrator')->name('pengaturan.pengguna');
 
-    // Menu yang belum dibangun -> halaman "sedang disiapkan"
-    $built = config('siakred.built');
+    // Menu yang belum dibangun -> halaman "sedang disiapkan", dijaga per peran (dev.md §6).
+    // Satu route bisa muncul di beberapa menu (mis. Log Aktivitas): peran digabung.
+    $belum = [];
     foreach (config('siakred.menu') as $item) {
-        $items = isset($item['children'])
-            ? array_map(fn ($c) => $c + ['grup' => $item['label']], $item['children'])
-            : [$item];
-
-        foreach ($items as $menu) {
-            if (empty($menu['route']) || in_array($menu['route'], $built, true)) {
+        foreach ($item['children'] ?? [$item] as $menu) {
+            if (empty($menu['route']) || in_array($menu['route'], config('siakred.built'), true)) {
                 continue;
             }
-            $route = Route::get($menu['url'], [PageController::class, 'placeholder'])
-                ->name($menu['route'])
-                ->defaults('judul', $menu['label'])
-                ->defaults('grup', $menu['grup'] ?? null);
-
-            if (!empty($menu['entitas'])) {
-                $route->middleware('akses:' . $menu['entitas'] . ',r');
-            }
+            $belum[$menu['route']] ??= [
+                'url'   => $menu['url'],
+                'judul' => $menu['label'],
+                'grup'  => isset($item['children']) ? $item['label'] : null,
+                'roles' => [],
+            ];
+            $belum[$menu['route']]['roles'] = array_unique([...$belum[$menu['route']]['roles'], ...$menu['roles']]);
         }
+    }
+    foreach ($belum as $nama => $r) {
+        Route::get($r['url'], [PageController::class, 'placeholder'])
+            ->name($nama)
+            ->middleware('peran:' . implode(',', $r['roles']))
+            ->defaults('judul', $r['judul'])
+            ->defaults('grup', $r['grup']);
     }
 });

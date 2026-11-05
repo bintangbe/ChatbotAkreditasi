@@ -11,7 +11,7 @@ class Verifikasi extends Model
 
     protected $table = 'verifikasi';
 
-    protected $fillable = ['capaian_id', 'user_id', 'status', 'catatan'];
+    protected $fillable = ['capaian_id', 'user_id', 'role_pelaku', 'status', 'catatan'];
 
     public function capaian(): BelongsTo
     {

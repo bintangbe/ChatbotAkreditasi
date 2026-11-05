@@ -2,91 +2,105 @@
 
 /*
 |--------------------------------------------------------------------------
-| Matriks hak akses (dev.md §6)
+| Matriks hak akses — 4 peran (markdowns/dev.md §6)
 |--------------------------------------------------------------------------
-| Format: kode_role => [entitas => huruf aksi]
-|   c = create, r = read, u = update, d = delete (soft delete)
-| Entitas = nama tabel. Kunci '*' berlaku untuk semua entitas yang tidak
-| disebut secara eksplisit. Dicek lewat User::bolehAkses() dan middleware
-| `akses:entitas,aksi`.
+| Prinsip: yang mengisi data tidak memverifikasi; yang memverifikasi tidak
+| menetapkan target; administrator tidak ikut menilai mutu.
+|
+| 'entitas' : nama tabel => huruf aksi. c=create r=read u=update d=delete.
+|             '*' berlaku untuk entitas yang tidak disebut eksplisit.
+|             Dicek lewat User::bolehAkses() & middleware `akses:entitas,aksi`.
+| 'aksi'    : aksi khusus di luar CRUD. Dicek lewat User::bolehAksi() &
+|             middleware `aksi:nama`. Transisi status capaian juga dijaga
+|             ulang di App\Services\CapaianWorkflow.
+| 'lingkup_log' : semua | prodi | sendiri (Log Aktivitas)
 */
 
-$masterAkademik = ['mahasiswa', 'lulusan', 'tracer_study', 'kurikulum', 'mata_kuliah', 'rps', 'penilaian_mk'];
-$masterPenelitian = ['penelitian', 'luaran', 'roadmap_penelitian', 'inkubasi_startup', 'pemanfaatan_hasil', 'skor_sinta'];
+// Seluruh tabel master data (§3.5–§3.10)
+$master = [
+    'program_studi',
+    'pegawai', 'pegawai_pendidikan', 'pegawai_sertifikasi', 'pegawai_jabatan', 'pegawai_rekognisi', 'pegawai_penugasan',
+    'mahasiswa', 'lulusan', 'tracer_study',
+    'kurikulum', 'peo', 'plo', 'peo_plo_map', 'mata_kuliah', 'clo', 'plo_clo_map', 'rps', 'rps_pertemuan', 'mk_pengampu', 'penilaian_mk',
+    'mitra', 'kerjasama', 'kegiatan_mahasiswa',
+    'roadmap_penelitian', 'penelitian', 'penelitian_anggota', 'luaran', 'pemanfaatan_hasil', 'inkubasi_startup', 'skor_sinta',
+    'sarpras', 'laboratorium', 'survei', 'survei_item', 'survei_respon', 'anggaran', 'anggaran_realisasi',
+    'akreditasi_sertifikasi', 'laporan_pddikti',
+];
+$referensi = ['standar', 'indikator'];
 
 return [
 
-    // Daftar peran (diisi ke tabel `roles` oleh RoleSeeder)
+    // Urutan juga menentukan "peran utama" bila satu pengguna punya beberapa peran
     'daftar' => [
-        'admin_spm'           => ['Admin SPM', 'Semua modul, kunci/buka periode, kelola standar & indikator'],
-        'admin_prodi'         => ['Admin Prodi', 'Master data lingkup prodinya, ajukan capaian'],
-        'operator_sdm'        => ['Operator SDM', 'Pegawai dan relasi anaknya'],
-        'operator_akademik'   => ['Operator Akademik', 'Mahasiswa, lulusan, mata kuliah, RPS, kurikulum'],
-        'operator_penelitian' => ['Operator Penelitian', 'Penelitian, luaran, roadmap, inkubasi'],
-        'operator_keuangan'   => ['Operator Keuangan', 'Anggaran dan realisasi'],
-        'operator_sarpras'    => ['Operator Sarpras', 'Sarana prasarana dan laboratorium'],
-        'dosen'               => ['Dosen', 'Baca capaian; ubah RPS & penilaian MK yang diampu'],
-        'verifikator'         => ['Verifikator', 'Verifikasi/tolak capaian, baca semua'],
-        'pimpinan'            => ['Pimpinan', 'Baca semua, akses dashboard'],
-    ],
-
-    // Hak dasar setiap pengguna yang login
-    'semua_pengguna' => [
-        'standar'           => 'r',
-        'indikator'         => 'r',
-        'capaian_indikator' => 'r',
-        'dokumen_bukti'     => 'r',
+        'administrator'  => ['Administrator', 'Teknis & konfigurasi sistem'],
+        'kaprodi'        => ['Kepala Program Studi', 'Penetapan target & persetujuan final'],
+        'tim_gkm'        => ['Tim Gugus Kendali Mutu', 'Verifikasi capaian & audit mutu internal'],
+        'tim_akreditasi' => ['Tim Akreditasi', 'Pengumpulan data, bukti, dan pengajuan capaian'],
     ],
 
     'roles' => [
-        'admin_spm' => ['*' => 'crud'],
 
-        'admin_prodi' => [
-            '*'                 => 'r',
-            'users'             => '',
-            'audit_log'         => '',
-            'roles'             => '',
-            'periode'           => 'r',
-            'standar'           => 'r',
-            'indikator'         => 'r',
-            'capaian_indikator' => 'cru',
-            'target_indikator'  => 'cru',
-            'program_studi'     => 'ru',
-            'pegawai'           => 'crud',
-            'kerjasama'         => 'crud',
-            'mitra'             => 'crud',
-            'kegiatan_mahasiswa' => 'crud',
-            'sarpras'           => 'crud',
-            'survei'            => 'crud',
-            'anggaran'          => 'crud',
-            'akreditasi_sertifikasi' => 'crud',
-            'laporan_pddikti'   => 'crud',
-            'dokumen_bukti'     => 'crud',
-        ] + array_fill_keys([...$masterAkademik, ...$masterPenelitian], 'crud'),
-
-        'operator_sdm' => array_fill_keys(
-            ['pegawai', 'pegawai_pendidikan', 'pegawai_sertifikasi', 'pegawai_jabatan', 'pegawai_rekognisi', 'pegawai_penugasan'],
-            'crud'
-        ) + ['dokumen_bukti' => 'cr'],
-
-        'operator_akademik' => array_fill_keys($masterAkademik, 'crud') + ['dokumen_bukti' => 'cr'],
-
-        'operator_penelitian' => array_fill_keys($masterPenelitian, 'crud') + ['dokumen_bukti' => 'cr'],
-
-        'operator_keuangan' => ['anggaran' => 'crud', 'anggaran_realisasi' => 'crud', 'dokumen_bukti' => 'cr'],
-
-        'operator_sarpras' => ['sarpras' => 'crud', 'laboratorium' => 'crud', 'dokumen_bukti' => 'cr'],
-
-        // Pembatasan "hanya MK yang diampunya" diterapkan di controller RPS (Tahap 3)
-        'dosen' => ['rps' => 'ru', 'penilaian_mk' => 'cru', 'dokumen_bukti' => 'cr'],
-
-        'verifikator' => [
-            '*'                 => 'r',
-            'users'             => '',
-            'verifikasi'        => 'cr',
-            'capaian_indikator' => 'ru',
+        'administrator' => [
+            'entitas' => array_fill_keys($master, 'crud') + array_fill_keys($referensi, 'crud') + [
+                'dokumen_bukti'     => 'crud',
+                'target_indikator'  => 'r',
+                'capaian_indikator' => 'r',
+                'verifikasi'        => 'r',
+                'temuan_ami'        => 'r',
+                'tindak_lanjut'     => 'r',
+                'periode'           => 'crud',
+                'users'             => 'crud',
+                'roles'             => 'crud',
+                'audit_log'         => 'r',
+            ],
+            'aksi' => ['hitung_capaian', 'kunci_periode', 'kelola_pengguna', 'mapping_perhitungan', 'import', 'export', 'restore', 'hard_delete'],
+            'lingkup_log' => 'semua',
         ],
 
-        'pimpinan' => ['*' => 'r'],
+        'kaprodi' => [
+            'entitas' => array_fill_keys($master, 'r') + array_fill_keys($referensi, 'r') + [
+                'dokumen_bukti'     => 'r',
+                'target_indikator'  => 'crud',
+                'capaian_indikator' => 'r',
+                'verifikasi'        => 'r',
+                'temuan_ami'        => 'r',
+                'tindak_lanjut'     => 'r',
+                'periode'           => 'r',
+                'audit_log'         => 'r',
+            ],
+            'aksi' => ['setujui_capaian', 'export'],
+            'lingkup_log' => 'prodi',
+        ],
+
+        'tim_akreditasi' => [
+            'entitas' => array_fill_keys($master, 'crud') + array_fill_keys($referensi, 'r') + [
+                'dokumen_bukti'     => 'cru',
+                'target_indikator'  => 'r',
+                'capaian_indikator' => 'cru',
+                'verifikasi'        => 'r',
+                'temuan_ami'        => 'r',
+                'tindak_lanjut'     => 'cru',
+                'periode'           => 'r',
+                'audit_log'         => 'r',
+            ],
+            'aksi' => ['hitung_capaian', 'input_manual_capaian', 'ajukan_capaian', 'import', 'export'],
+            'lingkup_log' => 'sendiri',
+        ],
+
+        'tim_gkm' => [
+            'entitas' => array_fill_keys($master, 'r') + array_fill_keys($referensi, 'r') + [
+                'dokumen_bukti'     => 'r',
+                'target_indikator'  => 'r',
+                'capaian_indikator' => 'r',
+                'verifikasi'        => 'cr',
+                'temuan_ami'        => 'crud',
+                'tindak_lanjut'     => 'r',
+                'periode'           => 'r',
+                'audit_log'         => 'r',
+            ],
+            'aksi' => ['verifikasi_capaian', 'tutup_temuan', 'export'],
+            'lingkup_log' => 'semua',
+        ],
     ],
 ];

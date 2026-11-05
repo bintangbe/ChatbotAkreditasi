@@ -14,7 +14,7 @@ class DatabaseSeeder extends Seeder
             PeriodeSeeder::class,
             ProgramStudiSeeder::class,
             StandarIndikatorSeeder::class,
-            AdminSeeder::class,
+            AkunContohSeeder::class,
         ]);
     }
 }

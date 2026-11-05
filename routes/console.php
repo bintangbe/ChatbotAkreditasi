@@ -12,9 +12,15 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // Buat / perbarui pengguna beserta perannya, sampai halaman CRUD pengguna tersedia.
-// Contoh: php artisan siakred:user budi budi@telkomuniversity.ac.id "Budi Santoso" --role=dosen --role=verifikator
+// Contoh: php artisan siakred:user budi budi@telkomuniversity.ac.id "Budi Santoso" --role=tim_akreditasi --prodi=S1-SI-SBY
+// Peran: administrator, kaprodi, tim_akreditasi, tim_gkm
 Artisan::command('siakred:user {username} {email} {nama} {--role=*} {--prodi=} {--password=}', function () {
-    $kodeRole = $this->option('role') ?: ['dosen'];
+    $kodeRole = $this->option('role');
+    if (!$kodeRole) {
+        $this->error('Sebutkan minimal satu peran dengan --role=...');
+        $this->line('Pilihan: ' . implode(', ', array_keys(config('permissions.daftar'))));
+        return 1;
+    }
     $roles = Role::whereIn('kode', $kodeRole)->get();
     $tidakAda = array_diff($kodeRole, $roles->pluck('kode')->all());
     if ($tidakAda) {

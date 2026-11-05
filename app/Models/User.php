@@ -64,17 +64,41 @@ class User extends Authenticatable
     }
 
     /**
-     * Cek hak akses dari matriks config/permissions.php.
+     * Peran utama = peran pertama milik user menurut urutan config('permissions.daftar').
+     * Menentukan halaman awal & label menu beranda.
+     */
+    public function peranUtama(): ?string
+    {
+        foreach (array_keys(config('permissions.daftar', [])) as $kode) {
+            if ($this->hasRole($kode)) {
+                return $kode;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Hak CRUD dari matriks config/permissions.php.
      * $aksi: c (create), r (read), u (update), d (delete).
      */
     public function bolehAkses(string $entitas, string $aksi = 'r'): bool
     {
-        $matriks = config('permissions.roles', []);
-        $umum = config('permissions.semua_pengguna', []);
+        foreach ($this->roleCodes() as $kode) {
+            $hak = config("permissions.roles.{$kode}.entitas", []);
+            if (str_contains($hak[$entitas] ?? $hak['*'] ?? '', $aksi)) {
+                return true;
+            }
+        }
 
-        foreach ([$umum, ...array_map(fn ($r) => $matriks[$r] ?? [], $this->roleCodes())] as $hak) {
-            $izin = $hak[$entitas] ?? $hak['*'] ?? '';
-            if (str_contains($izin, $aksi)) {
+        return false;
+    }
+
+    /** Aksi khusus di luar CRUD, mis. 'ajukan_capaian', 'setujui_capaian', 'kunci_periode'. */
+    public function bolehAksi(string $aksi): bool
+    {
+        foreach ($this->roleCodes() as $kode) {
+            if (in_array($aksi, config("permissions.roles.{$kode}.aksi", []), true)) {
                 return true;
             }
         }

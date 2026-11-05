@@ -14,6 +14,15 @@ class CapaianIndikator extends Model
 
     protected $table = 'capaian_indikator';
 
+    public const STATUS = [
+        'draft'         => 'Draft',
+        'diajukan'      => 'Diajukan',
+        'terverifikasi' => 'Terverifikasi',
+        'ditolak'       => 'Ditolak',
+        'dikembalikan'  => 'Dikembalikan',
+        'disetujui'     => 'Disetujui',
+    ];
+
     protected $fillable = [
         'indikator_id', 'periode_id', 'prodi_id', 'nilai', 'metode', 'rincian',
         'catatan', 'dihitung_pada', 'status',
