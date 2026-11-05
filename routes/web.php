@@ -2,6 +2,10 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\DokumenBuktiController;
+use App\Http\Controllers\LogAktivitasController;
+use App\Http\Controllers\Master\PegawaiController;
+use App\Http\Controllers\Master\ProgramStudiController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\Pengaturan\PenggunaController;
 use App\Http\Controllers\Referensi\IndikatorController;
@@ -32,6 +36,21 @@ Route::middleware('auth')->group(function () {
         ->middleware('akses:standar,r')->name('referensi.standar');
     Route::get('/referensi/indikator', [IndikatorController::class, 'index'])
         ->middleware('akses:indikator,r')->name('referensi.indikator');
+
+    // Master data — CRUD generik, hak akses dicek per aksi di BaseCrudController (dev.md §4)
+    ProgramStudiController::routes('master/program-studi', 'master.prodi');
+    PegawaiController::routes('master/pegawai', 'master.pegawai');
+
+    // Dokumen bukti (dev.md §3.4, §4.3)
+    Route::get('/dokumen', [DokumenBuktiController::class, 'index'])->name('dokumen.index');
+    Route::post('/dokumen', [DokumenBuktiController::class, 'store'])->name('dokumen.store');
+    Route::get('/dokumen/{id}/unduh', [DokumenBuktiController::class, 'unduh'])->whereNumber('id')->name('dokumen.unduh');
+
+    // Log aktivitas (administrator & tim_gkm, dev.md §6.1 & §6.4)
+    Route::middleware('peran:administrator,tim_gkm')->group(function () {
+        Route::get('/log-aktivitas', [LogAktivitasController::class, 'index'])->name('log.index');
+        Route::post('/log-aktivitas/{log}/restore', [LogAktivitasController::class, 'restore'])->name('log.restore');
+    });
 
     // Pengaturan
     Route::get('/pengaturan/pengguna', [PenggunaController::class, 'index'])

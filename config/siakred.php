@@ -85,7 +85,30 @@ return [
     ],
 
     // Halaman yang sudah punya tampilan sendiri (tidak dibuatkan route placeholder).
-    'built' => ['dashboard', 'asisten-ai', 'referensi.standar', 'referensi.indikator', 'pengaturan.pengguna'],
+    'built' => [
+        'dashboard', 'asisten-ai', 'referensi.standar', 'referensi.indikator', 'pengaturan.pengguna',
+        'master.prodi', 'master.pegawai', 'dokumen.index', 'log.index',
+    ],
+
+    /*
+    | Registri entitas (nama tabel) -> model & halaman. Dipakai Log Aktivitas
+    | (tautan + restore) dan Dokumen Bukti (entitas yang boleh dilampiri).
+    | 'route' = nama route modul (detail: {route}.show); anak memakai 'induk'.
+    */
+    'entitas' => [
+        'program_studi'       => ['label' => 'Program Studi',          'model' => App\Models\ProgramStudi::class,       'route' => 'master.prodi'],
+        'pegawai'             => ['label' => 'Pegawai',                'model' => App\Models\Pegawai::class,            'route' => 'master.pegawai'],
+        'pegawai_pendidikan'  => ['label' => 'Pendidikan pegawai',     'model' => App\Models\PegawaiPendidikan::class,  'induk' => ['pegawai', 'pegawai_id']],
+        'pegawai_sertifikasi' => ['label' => 'Sertifikasi pegawai',    'model' => App\Models\PegawaiSertifikasi::class, 'induk' => ['pegawai', 'pegawai_id']],
+        'pegawai_jabatan'     => ['label' => 'Jabatan pegawai',        'model' => App\Models\PegawaiJabatan::class,     'induk' => ['pegawai', 'pegawai_id']],
+        'pegawai_rekognisi'   => ['label' => 'Rekognisi pegawai',      'model' => App\Models\PegawaiRekognisi::class,   'induk' => ['pegawai', 'pegawai_id']],
+        'pegawai_penugasan'   => ['label' => 'Penugasan pegawai',      'model' => App\Models\PegawaiPenugasan::class,   'induk' => ['pegawai', 'pegawai_id']],
+        'dokumen_bukti'       => ['label' => 'Dokumen bukti',          'model' => App\Models\DokumenBukti::class],
+        'standar'             => ['label' => 'Standar',                'model' => App\Models\Standar::class],
+        'indikator'           => ['label' => 'Indikator',              'model' => App\Models\Indikator::class],
+        'periode'             => ['label' => 'Periode',                'model' => App\Models\Periode::class],
+        'capaian_indikator'   => ['label' => 'Capaian indikator',      'model' => App\Models\CapaianIndikator::class],
+    ],
 
     // Panel batasan di halaman Asisten AI (dev.md §8.4)
     'asisten' => [
