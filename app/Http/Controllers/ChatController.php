@@ -11,7 +11,7 @@ class ChatController extends Controller
 {
     public function index()
     {
-        return view('chat');
+        return view('asisten-ai.index');
     }
 
     public function queryPinecone()
